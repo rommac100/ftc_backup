@@ -47,6 +47,44 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         android:orientation="vertical"
         android:weightSum="1">
 
+        <RelativeLayout
+            android:id="@+id/top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@color/background_black">
+
+            <TextView
+                android:id="@+id/textDeviceName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/robotIcon"
+                android:padding="8dp"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="?attr/textWhite"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/textView18"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Autonomous Menu"
+                android:textSize="18sp"
+                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true"
+                android:textColor="@color/text_white"/>
+
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/textView17"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/robotIcon"
+            android:padding="8dp"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="?attr/textWhite"
+            android:textStyle="bold" />
+
         <TextView
             android:id="@+id/knockBall"
             android:layout_width="match_parent"
@@ -55,7 +93,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
         <Spinner
             android:id="@+id/knockball_selector"
-            android:layout_width="match_parent"
+            android:layout_width="174dp"
             android:layout_height="wrap_content"
             android:entries="@+id/knockball_array"
             android:prompt="@+id/knockball_prompt"
@@ -86,7 +124,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
         <Spinner
             android:id="@+id/alliance_selector"
-            android:layout_width="match_parent"
+            android:layout_width="172dp"
             android:layout_height="wrap_content"
             android:entries="@+id/alliance_array"
             android:prompt="@+id/alliance_prompt"
@@ -98,27 +136,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             android:layout_height="wrap_content"
             android:text="Button"
             android:onClick="saveAndExit"/>
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/idActiveConfigHeader"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingBottom="2dp"
-        android:paddingLeft="8dp"
-        android:paddingRight="8dp"
-        android:paddingTop="2dp">
-
-        <TextView
-            android:id="@+id/idActiveConfigName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="@color/text_white" />
-
-
 
     </LinearLayout>
 

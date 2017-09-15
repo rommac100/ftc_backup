@@ -47,11 +47,14 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -108,13 +111,120 @@ import org.firstinspires.ftc.robotcore.internal.ui.UILocation;
 import org.firstinspires.ftc.robotcore.internal.webserver.RobotControllerWebInfo;
 import org.firstinspires.ftc.robotcore.internal.webserver.WebServer;
 import org.firstinspires.inspection.RcInspectionActivity;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.JavaCameraView;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+
+import android.hardware.Camera;
+
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import ftc.vision.BeaconProcessor;
+import ftc.vision.FrameGrabber;
+
 @SuppressWarnings("WeakerAccess")
 public class FtcRobotControllerActivity extends Activity
   {
+
+    ////////////// START VISION PROCESSING CODE //////////////
+
+    static final int FRAME_WIDTH_REQUEST = 176;
+    static final int FRAME_HEIGHT_REQUEST = 144;
+
+    // Loads camera view of OpenCV for us to use. This lets us see using OpenCV
+    private CameraBridgeViewBase cameraBridgeViewBase;
+
+    //manages getting one frame at a time
+    public static FrameGrabber frameGrabber = null;
+
+    //set up the frameGrabber
+    void myOnCreate(){
+      getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+      cameraBridgeViewBase = (JavaCameraView) findViewById(R.id.show_camera_activity_java_surface_view);
+      frameGrabber = new FrameGrabber(cameraBridgeViewBase, FRAME_WIDTH_REQUEST, FRAME_HEIGHT_REQUEST);
+      frameGrabber.setImageProcessor(new BeaconProcessor());
+      frameGrabber.setSaveImages(true);
+    }
+
+    //when the "Grab" button is pressed
+    public void frameButtonOnClick(View v){
+      frameGrabber.grabSingleFrame();
+      while (!frameGrabber.isResultReady()) {
+        try {
+          Thread.sleep(5); //sleep for 5 milliseconds
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      Object result = frameGrabber.getResult();
+      ((TextView)findViewById(R.id.resultText)).setText(result.toString());
+    }
+
+    void myOnWindowFocusChanged(boolean hasFocus){
+      if (hasFocus) {
+        frameGrabber.stopFrameGrabber();
+      } else {
+        frameGrabber.throwAwayFrames();
+      }
+    }
+
+    void myOnPause(){
+      if (cameraBridgeViewBase != null) {
+        cameraBridgeViewBase.disableView();
+      }
+    }
+
+    void myOnResume(){
+      if (!OpenCVLoader.initDebug()) {
+        Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+      } else {
+        Log.d(TAG, "OpenCV library found inside package. Using it!");
+        mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+      }
+    }
+
+    public void myOnDestroy() {
+      if (cameraBridgeViewBase != null) {
+        cameraBridgeViewBase.disableView();
+      }
+    }
+
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+      @Override
+      public void onManagerConnected(int status) {
+        switch (status) {
+          case LoaderCallbackInterface.SUCCESS:
+            Log.i(TAG, "OpenCV Manager Connected");
+            //from now onwards, you can use OpenCV API
+//          Mat m = new Mat(5, 10, CvType.CV_8UC1, new Scalar(0));
+            cameraBridgeViewBase.enableView();
+            break;
+          case LoaderCallbackInterface.INIT_FAILED:
+            Log.i(TAG, "Init Failed");
+            break;
+          case LoaderCallbackInterface.INSTALL_CANCELED:
+            Log.i(TAG, "Install Cancelled");
+            break;
+          case LoaderCallbackInterface.INCOMPATIBLE_MANAGER_VERSION:
+            Log.i(TAG, "Incompatible Version");
+            break;
+          case LoaderCallbackInterface.MARKET_ERROR:
+            Log.i(TAG, "Market Error");
+            break;
+          default:
+            Log.i(TAG, "OpenCV Manager Install");
+            super.onManagerConnected(status);
+            break;
+        }
+      }
+    };
+
   public static final String TAG = "RCActivity";
   public String getTag() { return TAG; }
 
@@ -156,6 +266,7 @@ public class FtcRobotControllerActivity extends Activity
   protected FtcEventLoop eventLoop;
   protected Queue<UsbDevice> receivedUsbAttachmentNotifications;
 
+
   protected class RobotRestarter implements Restarter {
 
     public void requestRestart() {
@@ -196,6 +307,58 @@ public class FtcRobotControllerActivity extends Activity
       }
     }
   }
+
+
+    /////////////////////////////////////////////////////////
+    // ADDED FOR CAMERA!!!
+
+    public void initPreview(final Camera camera, final OpModeCamera context, final Camera.PreviewCallback previewCallback) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          context.preview = new CameraPreview(FtcRobotControllerActivity.this, camera, previewCallback);
+          FrameLayout previewLayout = (FrameLayout) findViewById(R.id.previewLayout);
+          previewLayout.addView(context.preview);
+        }
+      });
+    }
+
+    // poor coding style here.  Shouldn't have to duplicate these routines for regular and linear OpModes.
+    public void initPreviewLinear(final Camera camera, final LinearOpModeCamera context, final Camera.PreviewCallback previewCallback) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          context.preview = new CameraPreview(FtcRobotControllerActivity.this, camera, previewCallback);
+          FrameLayout previewLayout = (FrameLayout) findViewById(R.id.previewLayout);
+          previewLayout.addView(context.preview);
+        }
+      });
+    }
+
+
+    public void removePreview(final OpModeCamera context) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          FrameLayout previewLayout = (FrameLayout) findViewById(R.id.previewLayout);
+          previewLayout.removeAllViews();
+        }
+      });
+    }
+
+    public void removePreviewLinear(final LinearOpModeCamera context) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          FrameLayout previewLayout = (FrameLayout) findViewById(R.id.previewLayout);
+          previewLayout.removeAllViews();
+        }
+      });
+    }
+
+    // END CAMERA ADD!!!
+    //////////////////////////////////////////////
+
 
   protected void passReceivedUsbAttachmentsToEventLoop() {
     if (this.eventLoop != null) {
@@ -309,7 +472,8 @@ public class FtcRobotControllerActivity extends Activity
 
     //Autonomous Settings
     allianceColourText = (TextView) findViewById(R.id.alliance_colour);
-    getAutonomousSettings();
+
+    myOnCreate();
   }
 
   protected UpdateUI createUpdateUI() {
@@ -351,13 +515,19 @@ public class FtcRobotControllerActivity extends Activity
   @Override
   protected void onResume() {
     super.onResume();
+
+    ////////////// START VISION PROCESSING CODE //////////////
+    myOnResume();
+    ////////////// END VISION PROCESSING CODE //////////////
     RobotLog.vv(TAG, "onResume()");
-    getAutonomousSettings();
   }
 
   @Override
   protected void onPause() {
     super.onPause();
+    ////////////// START VISION PROCESSING CODE //////////////
+    myOnPause();
+    ////////////// END VISION PROCESSING CODE //////////////
     RobotLog.vv(TAG, "onPause()");
     if (programmingModeController.isActive()) {
       programmingModeController.stopProgrammingMode();
@@ -382,6 +552,10 @@ public class FtcRobotControllerActivity extends Activity
 
     PreferenceRemoterRC.getInstance().start(prefRemoterStartResult);
     DeviceNameManager.getInstance().stop(deviceNameManagerStartResult);
+
+    ////////////// START VISION PROCESSING CODE //////////////
+    myOnDestroy();
+    ////////////// END VISION PROCESSING CODE //////////////
 
     unbindFromService();
     // If the app manually (?) is stopped, then we don't need the auto-starting function (?)
@@ -452,13 +626,6 @@ public class FtcRobotControllerActivity extends Activity
     getMenuInflater().inflate(R.menu.ftc_robot_controller, menu);
     return true;
   }
-
-    public void getAutonomousSettings()
-    {
-      SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
-      preferences.getString("Alliance Colour", allianceColour);
-      allianceColourText.setText(allianceColour);
-    }
 
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
